@@ -29,7 +29,7 @@ func init() {
 	initDiscord()
 	go selfDestructMessageLoop(gExit, gSelfDestructMessages)
 	go utQueryLoop(gUTAutoQueryLoopUpdates, gUTQueryEvents)
-	go utLoop(gUTQueryEvents, gExit)
+	go utLoop(gUTQueryEvents, gMessageReactionAdds, gMessageReactionRemoves, gExit)
 }
 
 func initPaths() {
@@ -101,8 +101,10 @@ func initDiscord() {
 				}
 				
 				gBot.AddHandler(interactionCreateHandler)
+				gBot.AddHandler(messageReactionAddHandler)
+				gBot.AddHandler(messageReactionRemoveHandler)
 				
-				gBot.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMembers
+				gBot.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMembers | discordgo.IntentsGuildMessageReactions
 				
 				err = gBot.Open()
 				if err != nil {

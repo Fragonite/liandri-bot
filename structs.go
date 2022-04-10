@@ -9,6 +9,7 @@ type UTAutoQuery struct {
 	channelID string
 	messageID string
 	roleID string
+	mentions int
 	// mentions bool
 	joinMessages bool
 	leaveMessages bool

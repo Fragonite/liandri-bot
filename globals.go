@@ -25,6 +25,7 @@ const (
 	SERVER_STATUS_OFFLINE = "⚫"
 	DEFAULT_REACTION_EMOJI = "🖤"
 	ASSERT_MISSING_VERSION = "MISSING VERSION INFORMATION. SEE BUILD SCRIPT OR REMOVE VERSION CHECKS FROM SOURCE."
+	UT_ROLE_MENTIONS = true
 )
 
 var (
@@ -41,6 +42,8 @@ var (
 	gUTAutoQueryLoopUpdates = make(chan UTAutoQueryLoopUpdate, 10)
 	gUTQueryEvents = make(chan UTQueryEvent, 10)
 	gUTAutoQueryLimitChecks = make(chan UTAutoQueryLimitCheck, 10)
+	gMessageReactionAdds = make(chan discordgo.MessageReactionAdd, 10)
+	gMessageReactionRemoves = make(chan discordgo.MessageReactionRemove, 10)
 	gSlashCommands = []*discordgo.ApplicationCommand {
 		{
 			Name: "ut",

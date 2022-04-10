@@ -14,14 +14,16 @@ import (
 	"unicode/utf8"
 )
 
-func utLoop(queryEvents chan UTQueryEvent, exit chan struct{}) {
+func utLoop(queryEvents chan UTQueryEvent, reactionAddEvents chan discordgo.MessageReactionAdd, reactionRemoveEvents chan discordgo.MessageReactionRemove, exit chan struct{}) {
 	var utaq = make(map[string][]UTAutoQuery)
 	var utqe = make(map[string]UTQueryEvent)
+	var numPlayersPrevPrev = make(map[string]uint)
 	
 	utLoadAutoQueries(utaq)
 	
 	for key, _ := range utaq {
 		utqe[key] = UTQueryEvent{}
+		numPlayersPrevPrev[key] = 999//SUPPRESS MENTIONS ON CRASH OR RESTART.
 		gUTAutoQueryLoopUpdates <- UTAutoQueryLoopUpdate{queryAddress: key, delete: false}//DEADLOCK POTENTIAL?
 	}
 	
@@ -97,21 +99,21 @@ func utLoop(queryEvents chan UTQueryEvent, exit chan struct{}) {
 					if status == SERVER_STATUS_OFFLINE || (prev.numPlayers > 0 && qe.numPlayers == 0) {
 						status = ""
 					}
-					// if status == utGetServerStatus(&prev) || status == SERVER_STATUS_OFFLINE {
-					// 	status = ""
-					// }
-					// if prev.numPlayers > 0 && qe.numPlayers == 0 {
-					// 	status = ""
-					// }
+					
+					var mention = numPlayersPrevPrev[qe.queryAddress] == 0 && prev.numPlayers == 0 && qe.numPlayers > 0
 					
 					for _, v := range utaq[qe.queryAddress] {
-						go func (messageEmbed discordgo.MessageEmbed, queryAddress string, autoQuery UTAutoQuery, serverStatus string) {
+						go func (messageEmbed discordgo.MessageEmbed, queryAddress string, autoQuery UTAutoQuery, serverStatus string, mentionRole bool) {
 							_, err := gBot.ChannelMessageEditEmbed(autoQuery.channelID, autoQuery.messageID, &messageEmbed)
 							if err != nil {
 								gLogger.Println(err)
 								gLogger.Println("Deleting auto query channel and role.")
 								gUTDeleteAutoQueries <- UTNewAutoQuery{aq: autoQuery, qe: UTQueryEvent{queryAddress: queryAddress}}
 								return
+							}
+							
+							if autoQuery.mentions > 0 && mentionRole {
+								go sendSelfDestructMessage(autoQuery.channelID, "<@" + autoQuery.roleID + "> A new foe has appeared!", time.Duration(time.Minute * 10))
 							}
 							
 							st, err := gBot.Channel(autoQuery.channelID)
@@ -129,13 +131,17 @@ func utLoop(queryEvents chan UTQueryEvent, exit chan struct{}) {
 										Name: status + st.Name[1:],
 										Position: st.Position,
 									}
-									gBot.ChannelEditComplex(autoQuery.channelID, &edit)
+									_, err = gBot.ChannelEditComplex(autoQuery.channelID, &edit)
+									if err != nil {
+										gLogger.Println(err)
+									}
 								}
 							}
-						}(embed, qe.queryAddress, v, status)
+						}(embed, qe.queryAddress, v, status, mention)
 					}
 					
 					if qe.online {
+						numPlayersPrevPrev[qe.queryAddress] = prev.numPlayers
 						utqe[qe.queryAddress] = qe
 					} else {
 						prev.online = false
@@ -206,7 +212,7 @@ func utLoop(queryEvents chan UTQueryEvent, exit chan struct{}) {
 			// This could get expensive if spammed.
 			var noError = true
 			var numServers = 0
-			multiBreak:
+			multiBreakLimitCheck:
 			for _, v := range utaq {
 				for _, aq := range v {
 					if lc.guildID == aq.guildID {
@@ -214,7 +220,7 @@ func utLoop(queryEvents chan UTQueryEvent, exit chan struct{}) {
 						if numServers >= MAX_AUTO_QUERY_NUMBER_PER_GUILD {
 							lc.err <- errors.New(fmt.Sprintf("Server limit reached (%d).", MAX_AUTO_QUERY_NUMBER_PER_GUILD))
 							noError = false
-							break multiBreak
+							break multiBreakLimitCheck
 						}
 					}
 				}
@@ -224,60 +230,54 @@ func utLoop(queryEvents chan UTQueryEvent, exit chan struct{}) {
 				lc.err <- nil
 			}
 			
+			
+		case re := <- reactionAddEvents:
+			
+			
+			if !(utMessageReactionAddRelevant(&re)) {
+				break
+			}
+			multiBreakReactionAdd:
+			for key, aqs := range utaq {
+				for i, v := range aqs {
+					if v.messageID == re.MessageID {
+						err := gBot.GuildMemberRoleAdd(v.guildID, re.UserID, v.roleID)
+						if err != nil {
+							gLogger.Println(err, re)
+						}
+						v.mentions += 1
+						utaq[key][i] = v
+						break multiBreakReactionAdd
+					}
+				}
+			}
+			
+			
+		case re := <- reactionRemoveEvents:
+			
+			
+			if !(utMessageReactionRemoveRelevant(&re)) {
+				break
+			}
+			multiBreakReactionRemove:
+			for key, aqs := range utaq {
+				for i, v := range aqs {
+					if v.messageID == re.MessageID {
+						err := gBot.GuildMemberRoleRemove(v.guildID, re.UserID, v.roleID)
+						if err != nil {
+							gLogger.Println(err, re)
+						}
+						v.mentions = MaxInt(v.mentions - 1, 0)
+						utaq[key][i] = v
+						break multiBreakReactionRemove
+					}
+				}
+			}
+			
 		case <- exit:
 			utSaveAutoQueries(utaq)
 			return
-			
-			// if _, ok := utaq[limit.queryAddress]; ok {
-			// 	for _, v := range utaq[limit.queryAddress] {
-			// 		if v.guildID == limit.guildID {
-			// 			duplicate = true
-			// 			break
-			// 		}
-			// 	}
-			// }
-			
-			// duplicateCheck.result <- duplicateFound
 		}
-		// select {
-		// case dc := <- gUTAutoQueryDuplicateCheck:
-			
-		// }
-		// select {
-		// case aqdc 
-		// }
-		// select {
-		// case dqc := <- gUTLoopDuplicateQueryCheck:
-		// 	if aqs, ok := utaq[dqc]
-		// }
-		// select {
-		// case cfd := <- gUTLoopCheckForDuplicate
-		// case cfd
-		// case cfd := <- gUTLoopCheckForDuplicate:
-		// 	var duplicateFound = false
-			
-		// 	for _, v := range utaq[cfd.queryAddress] {
-		// 		if v.guildID == cfd.guildID {
-		// 			cfd.duplicate <- true
-		// 			break
-		// 		}
-		// 	}
-		// 	check.duplicate <- duplicate
-		// case aq := <- gUTAutoQuerySlashCommandUpdates://CAUTION: CONTAINS UNNAMED UNIONS.
-		// 	var embed = utNewEmbed(utNewQueryEvent(aq.messageID, utQueryServer()))
-		// 	// Check to make sure channel doesn't already exist
-		// 	// Setup channel
-		// 	// Query server and post message
-		// 	// Register for this server to get ehm whatevs yeah er um UTQueryEvents
-		// 	// Wait um I don't know tbh
-		// case qe := <- gUTQueryEvents:
-		// 	// Find this queryAddress
-		// 	// Loop through all dependent channels
-		// 	// update embed
-		// 	// send messages
-		// 	// if errors, delete channel entry? save?
-		// case qe ""
-		// }
 	}
 }
 
@@ -399,7 +399,7 @@ func utQueryServer(queryAddress string) string {
 		
 		n, err := conn.Read(result)
 		if err != nil {
-			gLogger.Println(err)
+			// gLogger.Println(err)
 			return ""
 		}
 		
@@ -882,6 +882,34 @@ func utGetServerStatus(qe *UTQueryEvent) (string) {
 	}
 }
 
+func utMessageReactionAddRelevant(re *discordgo.MessageReactionAdd) (bool) {
+	if re.UserID == gBot.State.User.ID {
+		return false
+	}
+	
+	if re.Member == nil {
+		return false
+	}
+	
+	if re.Emoji.Name != DEFAULT_REACTION_EMOJI {
+		return false
+	}
+	
+	return true
+}
+
+func utMessageReactionRemoveRelevant(re *discordgo.MessageReactionRemove) (bool) {
+	if re.UserID == gBot.State.User.ID {
+		return false
+	}
+	
+	if re.Emoji.Name != DEFAULT_REACTION_EMOJI {
+		return false
+	}
+	
+	return true
+}
+
 func utSaveAutoQueries(utaq map[string][]UTAutoQuery) {
 	var file, err = os.Create("ut.csv")
 	if err != nil {
@@ -894,7 +922,7 @@ func utSaveAutoQueries(utaq map[string][]UTAutoQuery) {
 	var records = make([][]string, 0, len(utaq))
 	
 	for k := range utaq {
-		var fields = make([]string, 0, len(utaq[k]) * 7 + 1)
+		var fields = make([]string, 0, len(utaq[k]) * 8 + 1)
 		fields = append(fields, k)
 		for _, v := range utaq[k] {
 			fields = append(fields, []string{
@@ -902,6 +930,7 @@ func utSaveAutoQueries(utaq map[string][]UTAutoQuery) {
 				v.channelID, 
 				v.messageID, 
 				v.roleID, 
+				strconv.Itoa(v.mentions), 
 				strconv.FormatBool(v.joinMessages), 
 				strconv.FormatBool(v.leaveMessages), 
 				v.timer.String(),
@@ -933,18 +962,23 @@ func utLoadAutoQueries(utaq map[string][]UTAutoQuery) {
 	
 	for _, r := range records {
 		var key = r[0]
-		for j := 1; j <= len(r[1:]); j += 7 {
-			joinMessages, err := strconv.ParseBool(r[j+4])
+		for j := 1; j <= len(r[1:]); j += 8 {
+			mentions, err := strconv.Atoi(r[j+4])
+			if err != nil {
+				gLogger.Println(err)
+				mentions = 0
+			}
+			joinMessages, err := strconv.ParseBool(r[j+5])
 			if err != nil {
 				gLogger.Println(err)
 				joinMessages = false
 			}
-			leaveMessages, err := strconv.ParseBool(r[j+5])
+			leaveMessages, err := strconv.ParseBool(r[j+6])
 			if err != nil {
 				gLogger.Println(err)
 				leaveMessages = false
 			}
-			timer, err := time.ParseDuration(r[j+6])
+			timer, err := time.ParseDuration(r[j+7])
 			if err != nil {
 				gLogger.Println(err)
 				timer = SELF_DESTRUCT_TIMER_DEFAULT
@@ -954,6 +988,7 @@ func utLoadAutoQueries(utaq map[string][]UTAutoQuery) {
 				channelID: r[j+1],
 				messageID: r[j+2],
 				roleID: r[j+3],
+				mentions: mentions,
 				joinMessages: joinMessages,
 				leaveMessages: leaveMessages,
 				timer: timer,

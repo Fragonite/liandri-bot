@@ -26,6 +26,13 @@ func MinUint(x, y uint) uint {
 	return y
 }
 
+func MaxInt(x, y int) int {
+	if x > y {
+		return x
+	}
+	return y
+}
+
 func FormatSecondsToMinutes(s string) (string) {
 	temp, err := strconv.Atoi(s)
 	if err != nil {

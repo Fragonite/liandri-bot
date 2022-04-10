@@ -369,6 +369,12 @@ func interactionCreateHandler(s *discordgo.Session, in *discordgo.InteractionCre
 				// }
 				
 				
+				
+				err = s.MessageReactionAdd(channel.ID, message.ID, DEFAULT_REACTION_EMOJI)
+				if err != nil {
+					gLogger.Println(err)
+				}
+				
 				s.InteractionRespond(in.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
@@ -398,6 +404,18 @@ func interactionCreateHandler(s *discordgo.Session, in *discordgo.InteractionCre
 				// gUTNewAutoQueries <- naq
 			}
 		}
+	}
+}
+
+func messageReactionAddHandler(s *discordgo.Session, re *discordgo.MessageReactionAdd) {
+	if utMessageReactionAddRelevant(re) {
+		gMessageReactionAdds <- *re
+	}
+}
+
+func messageReactionRemoveHandler(s *discordgo.Session, re *discordgo.MessageReactionRemove) {
+	if utMessageReactionRemoveRelevant(re) {
+		gMessageReactionRemoves <- *re
 	}
 }
 
