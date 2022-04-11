@@ -127,7 +127,7 @@ func utLoop(queryEvents chan UTQueryEvent, reactionAddEvents chan discordgo.Mess
 					}
 					
 					for _, v := range utaq[qe.queryAddress] {
-						go func (serverStatus string) {
+						go func (autoQuery UTAutoQuery, serverStatus string) {
 							st, err := gBot.Channel(autoQuery.channelID)
 							rune, _ := utf8.DecodeRuneInString(st.Name)
 							switch(string(rune)) {
@@ -149,7 +149,7 @@ func utLoop(queryEvents chan UTQueryEvent, reactionAddEvents chan discordgo.Mess
 									}
 								}
 							}
-						}(status)
+						}(v, status)
 					}
 				} else {
 					gLogger.Println(ok)
