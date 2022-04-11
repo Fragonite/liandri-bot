@@ -13,8 +13,6 @@ import (
 )
 
 func main() {
-	// gLogger.Println(time.Now().UTC().Format(time.RFC3339))
-	
 	gBot.UpdateStatusComplex(discordgo.UpdateStatusData{Activities: []*discordgo.Activity{{Name: "Unreal Tournament", Type: discordgo.ActivityTypeWatching}}})
 	
 	var c = make(chan os.Signal)
@@ -34,7 +32,6 @@ func interactionCreateHandler(s *discordgo.Session, in *discordgo.InteractionCre
 			switch in.ApplicationCommandData().Options[0].Options[0].Name {
 			case "server":
 				var naq = UTNewAutoQuery{aq: UTAutoQuery{guildID: in.GuildID, timer: SELF_DESTRUCT_TIMER_DEFAULT}}
-				// var aq = UTAutoQuery{guildID: in.GuildID, joinMessages: true, leaveMessages: true, timer: SELF_DESTRUCT_TIMER_DEFAULT}
 				var err error
 				var sHost, sPort string
 				var iPort int
@@ -201,8 +198,6 @@ func interactionCreateHandler(s *discordgo.Session, in *discordgo.InteractionCre
 					return
 				}
 				
-				// gLogger.Println("Limit Check Start")
-				
 				if !(admin) {
 					var lc = UTAutoQueryLimitCheck{
 						queryAddress: net.JoinHostPort(sHost, strconv.Itoa(iPort)),
@@ -228,34 +223,6 @@ func interactionCreateHandler(s *discordgo.Session, in *discordgo.InteractionCre
 					}
 					
 				}
-				
-				// gLogger.Println("Limit Check End")
-
-				// if !(admin) {
-				// 	//TODO: CHECK AGAINST ADMIN WHITELIST (DONE ACTUALLY) AND MAX NUMBER OF AUTO QUERY ENTRIES PER GUILD.
-				// 	var duplicateCheck = UTAutoQueryDuplicateCheck{
-				// 		queryAddress: net.JoinHostPort(sHost, strconv.Itoa(iPort)),
-				// 		guildID: in.GuildID,
-				// 		result: make(chan bool),
-				// 	}
-				// 	gUTAutoQueryDuplicateChecks <- duplicateCheck
-				// 	var duplicate = <- duplicateCheck.result
-				// 	close(duplicateCheck.result)
-					
-				// 	if duplicate {
-				// 		gLogger.Println(duplicateCheck)
-				// 		errorMessages.WriteString("Error :: An entry for this server already exists.\n")
-				// 		errorMessages.WriteString("```")
-				// 		s.InteractionRespond(in.Interaction, &discordgo.InteractionResponse{
-				// 			Type: discordgo.InteractionResponseChannelMessageWithSource,
-				// 			Data: &discordgo.InteractionResponseData{
-				// 				Content: errorMessages.String(),
-				// 				Flags: 1 << 6,
-				// 			},
-				// 		})
-				// 		return
-				// 	}
-				// }
 				
 				channel, err := s.GuildChannelCreateComplex(in.GuildID, discordgo.GuildChannelCreateData{
 					Name: utGetServerStatus(&naq.qe) + name,
@@ -362,14 +329,6 @@ func interactionCreateHandler(s *discordgo.Session, in *discordgo.InteractionCre
 					return
 				}
 				
-				// time.Sleep(15 * time.Second)
-				// err = s.ChannelMessageDelete(channel.ID, message.ID)
-				// if err != nil {
-				// 	gLogger.Println(err)
-				// }
-				
-				
-				
 				err = s.MessageReactionAdd(channel.ID, message.ID, DEFAULT_REACTION_EMOJI)
 				if err != nil {
 					gLogger.Println(err)
@@ -389,19 +348,6 @@ func interactionCreateHandler(s *discordgo.Session, in *discordgo.InteractionCre
 				naq.aq.roleID = role.ID
 				
 				gUTNewAutoQueries <- naq
-				
-				// var embed = utNewEmbed(naq.qe)
-				
-				// naq.aq.roleID = strconv.FormatBool(mentions)//CAUTION: USING VARIABLE AS UNION.
-				// naq.aq.messageID = net.JoinHostPort(sHost, strconv.Itoa(iPort))//CAUTION: USING VARIABLE AS UNION.
-				// naq.aq.channelID = channel.ID//channelName//CAUTION: USING VARIABLE AS UNION.
-				
-				// gUTAutoQuerySlashCommandUpdates <- aq
-				// gLogger.Println(naq.aq)
-				// go sendSelfDestructMessage(channel.ID, "Hello, world!", time.Duration(15 * time.Second))
-				
-				
-				// gUTNewAutoQueries <- naq
 			}
 		}
 	}

@@ -27,16 +27,12 @@ func utLoop(queryEvents chan UTQueryEvent, reactionAddEvents chan discordgo.Mess
 		gUTAutoQueryLoopUpdates <- UTAutoQueryLoopUpdate{queryAddress: key, delete: false}//DEADLOCK POTENTIAL?
 	}
 	
-	// gLogger.Println(utaq)
-	
 	for {
 		select {
 		case qe := <- queryEvents:
 			
 			if _, ok := utaq[qe.queryAddress]; ok {
 				if prev, ok := utqe[qe.queryAddress]; ok {
-					
-					// TODO: Order players by score, then name.
 					
 					// Reduce updates when the only players are spectators.
 					for i, player := range qe.ut.Players {
@@ -45,8 +41,6 @@ func utLoop(queryEvents chan UTQueryEvent, reactionAddEvents chan discordgo.Mess
 							qe.ut.Players[i].Time = "0"
 						}
 					}
-					
-					// playerSlice := qe.ut.Players
 					
 					sort.Slice(qe.ut.Players[:qe.numPlayers], func (i, j int) bool {
 						if qe.ut.Players[i].Mesh == "Spectator" || qe.ut.Players[j].Mesh == "Spectator" {
@@ -77,8 +71,6 @@ func utLoop(queryEvents chan UTQueryEvent, reactionAddEvents chan discordgo.Mess
 						}
 						return time0 < time1
 					})
-					
-					// qe.ut.Players = playerSlice
 					
 					if qe == prev {
 						break
