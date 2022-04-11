@@ -49,8 +49,6 @@ func initLogger() {
 		}
 	}
 	log.Fatal(err)
-	
-	os.Stderr = os.Stdout//CAPTURE STDERR OUTPUT.
 }
 
 func initAdminWhitelist() {

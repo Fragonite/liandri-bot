@@ -72,16 +72,6 @@ func utLoop(queryEvents chan UTQueryEvent, reactionAddEvents chan discordgo.Mess
 						return time0 < time1
 					})
 					
-					if qe == prev {
-						break
-					}
-					
-					embed, err := utNewEmbed(qe)
-					if err != nil {
-						gLogger.Println(err)
-						break
-					}
-					
 					var status = utGetServerStatus(&qe)
 					
 					// Reduce chance of rate limits.
@@ -92,31 +82,52 @@ func utLoop(queryEvents chan UTQueryEvent, reactionAddEvents chan discordgo.Mess
 						status = ""
 					}
 					
-					var mention = numPlayersPrevPrev[qe.queryAddress] == 0 && prev.numPlayers == 0 && qe.numPlayers > 0
+					if qe != prev && (prev.online || qe.online) {
+						embed, err := utNewEmbed(qe)
+						if err != nil {
+							gLogger.Println(err)
+							break
+						}
+						
+						var mention = numPlayersPrevPrev[qe.queryAddress] == 0 && prev.numPlayers == 0 && qe.numPlayers > 0
+						
+						for _, v := range utaq[qe.queryAddress] {
+							go func (messageEmbed discordgo.MessageEmbed, queryAddress string, autoQuery UTAutoQuery, mentionRole bool) {
+								_, err := gBot.ChannelMessageEditEmbed(autoQuery.channelID, autoQuery.messageID, &messageEmbed)
+								if err != nil {
+									gLogger.Println(err)
+									
+									// https://discord.com/developers/docs/topics/opcodes-and-status-codes#json-json-error-codes
+									switch {
+									case strings.Contains(err.Error(), "\"code\": 10003"):
+										fallthrough
+									case strings.Contains(err.Error(), "\"code\": 10004"):
+										fallthrough
+									case strings.Contains(err.Error(), "\"code\": 10008"):
+										gLogger.Println("Deleting auto query channel and role.")
+										gUTDeleteAutoQueries <- UTNewAutoQuery{aq: autoQuery, qe: UTQueryEvent{queryAddress: queryAddress}}
+									}
+									return
+								}
+								
+								if autoQuery.mentions > 0 && mentionRole {
+									go sendSelfDestructMessage(autoQuery.channelID, "<@&" + autoQuery.roleID + "> A new foe has appeared!", time.Duration(time.Minute * 10))
+								}
+								
+							}(embed, qe.queryAddress, v, mention)
+						}
+						
+						if qe.online {
+							numPlayersPrevPrev[qe.queryAddress] = prev.numPlayers
+							utqe[qe.queryAddress] = qe
+						} else {
+							prev.online = false
+							utqe[qe.queryAddress] = prev
+						}
+					}
 					
 					for _, v := range utaq[qe.queryAddress] {
-						go func (messageEmbed discordgo.MessageEmbed, queryAddress string, autoQuery UTAutoQuery, serverStatus string, mentionRole bool) {
-							_, err := gBot.ChannelMessageEditEmbed(autoQuery.channelID, autoQuery.messageID, &messageEmbed)
-							if err != nil {
-								gLogger.Println(err)
-								
-								// https://discord.com/developers/docs/topics/opcodes-and-status-codes#json-json-error-codes
-								switch {
-								case strings.Contains(err.Error(), "\"code\": 10003"):
-									fallthrough
-								case strings.Contains(err.Error(), "\"code\": 10004"):
-									fallthrough
-								case strings.Contains(err.Error(), "\"code\": 10008"):
-									gLogger.Println("Deleting auto query channel and role.")
-									gUTDeleteAutoQueries <- UTNewAutoQuery{aq: autoQuery, qe: UTQueryEvent{queryAddress: queryAddress}}
-								}
-								return
-							}
-							
-							if autoQuery.mentions > 0 && mentionRole {
-								go sendSelfDestructMessage(autoQuery.channelID, "<@&" + autoQuery.roleID + "> A new foe has appeared!", time.Duration(time.Minute * 10))
-							}
-							
+						go func (serverStatus string) {
 							st, err := gBot.Channel(autoQuery.channelID)
 							rune, _ := utf8.DecodeRuneInString(st.Name)
 							switch(string(rune)) {
@@ -138,15 +149,7 @@ func utLoop(queryEvents chan UTQueryEvent, reactionAddEvents chan discordgo.Mess
 									}
 								}
 							}
-						}(embed, qe.queryAddress, v, status, mention)
-					}
-					
-					if qe.online {
-						numPlayersPrevPrev[qe.queryAddress] = prev.numPlayers
-						utqe[qe.queryAddress] = qe
-					} else {
-						prev.online = false
-						utqe[qe.queryAddress] = prev
+						}(status)
 					}
 				} else {
 					gLogger.Println(ok)
@@ -319,7 +322,7 @@ func utQueryLoop(chIn <- chan UTAutoQueryLoopUpdate, chOut chan <- UTQueryEvent)
 			if i < len(serverList) && serverList[i].queryAddress == event.queryAddress {
 				
 				if event.online {
-					if event.ut.NumPlayers == "0" {
+					if event.numPlayers == 0 {
 						serverList[i].delayPeriod = 1
 						serverList[i].waitPeriod = MinUint(serverList[i].waitPeriod, serverList[i].delayPeriod)
 					} else {
