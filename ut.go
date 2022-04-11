@@ -99,13 +99,22 @@ func utLoop(queryEvents chan UTQueryEvent, reactionAddEvents chan discordgo.Mess
 							_, err := gBot.ChannelMessageEditEmbed(autoQuery.channelID, autoQuery.messageID, &messageEmbed)
 							if err != nil {
 								gLogger.Println(err)
-								gLogger.Println("Deleting auto query channel and role.")
-								gUTDeleteAutoQueries <- UTNewAutoQuery{aq: autoQuery, qe: UTQueryEvent{queryAddress: queryAddress}}
+								
+								// https://discord.com/developers/docs/topics/opcodes-and-status-codes#json-json-error-codes
+								switch {
+								case strings.Contains(err.Error(), "\"code\": 10003"):
+									fallthrough
+								case strings.Contains(err.Error(), "\"code\": 10004"):
+									fallthrough
+								case strings.Contains(err.Error(), "\"code\": 10008"):
+									gLogger.Println("Deleting auto query channel and role.")
+									gUTDeleteAutoQueries <- UTNewAutoQuery{aq: autoQuery, qe: UTQueryEvent{queryAddress: queryAddress}}
+								}
 								return
 							}
 							
 							if autoQuery.mentions > 0 && mentionRole {
-								go sendSelfDestructMessage(autoQuery.channelID, "<@" + autoQuery.roleID + "> A new foe has appeared!", time.Duration(time.Minute * 10))
+								go sendSelfDestructMessage(autoQuery.channelID, "<@&" + autoQuery.roleID + "> A new foe has appeared!", time.Duration(time.Minute * 10))
 							}
 							
 							st, err := gBot.Channel(autoQuery.channelID)
