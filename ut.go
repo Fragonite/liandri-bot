@@ -252,6 +252,7 @@ func utLoop(queryEvents chan UTQueryEvent, reactionAddEvents chan discordgo.Mess
 						err := gBot.GuildMemberRoleAdd(v.guildID, re.UserID, v.roleID)
 						if err != nil {
 							gLogger.Println(err, re)
+							break multiBreakReactionAdd
 						}
 						v.mentions += 1
 						utaq[key][i] = v
@@ -274,6 +275,7 @@ func utLoop(queryEvents chan UTQueryEvent, reactionAddEvents chan discordgo.Mess
 						err := gBot.GuildMemberRoleRemove(v.guildID, re.UserID, v.roleID)
 						if err != nil {
 							gLogger.Println(err, re)
+							break multiBreakReactionRemove
 						}
 						v.mentions = MaxInt(v.mentions - 1, 0)
 						utaq[key][i] = v
