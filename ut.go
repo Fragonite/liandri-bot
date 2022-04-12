@@ -129,6 +129,10 @@ func utLoop(queryEvents chan UTQueryEvent, reactionAddEvents chan discordgo.Mess
 					for _, v := range utaq[qe.queryAddress] {
 						go func (autoQuery UTAutoQuery, serverStatus string) {
 							st, err := gBot.Channel(autoQuery.channelID)
+							if err != nil {
+								gLogger.Println(err)
+								return
+							}
 							rune, _ := utf8.DecodeRuneInString(st.Name)
 							switch(string(rune)) {
 							case SERVER_STATUS_FULL:

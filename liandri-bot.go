@@ -337,7 +337,7 @@ func interactionCreateHandler(s *discordgo.Session, in *discordgo.InteractionCre
 				s.InteractionRespond(in.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
-						Content: "```asciidoc\nSuccess :: The slash command was successful.\n```",
+						Content: "```asciidoc\nSuccess :: The slash command was successful. A new channel has been created.\n```",
 						Flags: 1 << 6,
 					},
 				})
