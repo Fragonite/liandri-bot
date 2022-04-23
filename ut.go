@@ -672,12 +672,12 @@ func utNewEmbed(qe UTQueryEvent) (discordgo.MessageEmbed, error) {
 		return embed, nil
 	}
 	
-	var thumbnail discordgo.MessageEmbedThumbnail
+	var image discordgo.MessageEmbedImage
 	if qe.previewURL != "" {
-		thumbnail.URL = qe.previewURL
-		thumbnail.Width = 256
-		thumbnail.Height = 256
-		embed.Thumbnail = &thumbnail
+		image.URL = qe.previewURL
+		image.Width = 128
+		image.Height = 128
+		embed.Image = &image
 	}
 	
 	var fields = make([]discordgo.MessageEmbedField, 0, 10)
