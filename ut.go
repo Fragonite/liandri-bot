@@ -54,7 +54,7 @@ func utLoop(queryEvents chan UTQueryEvent, reactionAddEvents chan discordgo.Mess
 						if score0 != score1 {
 							return score0 > score1
 						}
-						return strings.ToLower(qe.ut.Players[i].Name) < strings.ToLower(qe.ut.Players[j].Name)
+						return strings.ToLower(qe.ut.Players[i].Player) < strings.ToLower(qe.ut.Players[j].Player)
 					})
 					
 					var status = utGetServerStatus(&qe)
