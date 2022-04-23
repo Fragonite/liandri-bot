@@ -43,33 +43,18 @@ func utLoop(queryEvents chan UTQueryEvent, reactionAddEvents chan discordgo.Mess
 					}
 					
 					sort.Slice(qe.ut.Players[:qe.numPlayers], func (i, j int) bool {
-						if qe.ut.Players[i].Mesh == "Spectator" || qe.ut.Players[j].Mesh == "Spectator" {
-							return false
-						}
 						score0, err := strconv.Atoi(qe.ut.Players[i].Frags)
 						if err != nil {
-							gLogger.Println(qe.queryAddress, qe.ut.Players[i])
-							return false
+							score0 = 0
 						}
 						score1, err := strconv.Atoi(qe.ut.Players[j].Frags)
 						if err != nil {
-							gLogger.Println(qe.queryAddress, qe.ut.Players[j])
-							return false
+							score0 = 0
 						}
 						if score0 != score1 {
 							return score0 > score1
 						}
-						time0, err := strconv.Atoi(qe.ut.Players[i].Time)
-						if err != nil {
-							gLogger.Println(err)
-							return false
-						}
-						time1, err := strconv.Atoi(qe.ut.Players[j].Time)
-						if err != nil {
-							gLogger.Println(err)
-							return false
-						}
-						return time0 < time1
+						return strings.ToLower(qe.ut.Players[i].Name) < strings.ToLower(qe.ut.Players[j].Name)
 					})
 					
 					var status = utGetServerStatus(&qe)
