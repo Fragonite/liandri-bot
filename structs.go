@@ -29,6 +29,7 @@ type UTAutoQueryLoopUpdate struct {
 
 type UTQueryEvent struct {
 	queryAddress string
+	previewURL string
 	online bool
 	numTeams uint
 	numPlayers uint

@@ -646,6 +646,10 @@ func utNewQueryEvent(queryAddress, queryResult string) UTQueryEvent {
 		}
 	}
 	
+	if url, ok := gURLs.Load(qe.ut.MapName); ok {
+		qe.previewURL = url.(string)
+	}
+	
 	if qe.ut.Hostport != "" {
 		qe.online = true
 	}
@@ -681,6 +685,14 @@ func utNewEmbed(qe UTQueryEvent) (discordgo.MessageEmbed, error) {
 		embed.Author = &author
 		embed.Footer = &footer
 		return embed, nil
+	}
+	
+	var thumbnail discordgo.MessageEmbedThumbnail
+	if qe.previewURL != "" {
+		thumbnail.URL = qe.previewURL
+		thumbnail.Width = 256
+		thumbnail.Height = 256
+		embed.Thumbnail = &thumbnail
 	}
 	
 	var fields = make([]discordgo.MessageEmbedField, 0, 10)

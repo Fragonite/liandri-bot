@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 	"github.com/bwmarrin/discordgo"
+	"sync"
 )
 
 const (
@@ -34,6 +35,7 @@ var (
 	gLogFile *os.File
 	gLogger *log.Logger
 	gAdmins []string
+	gURLs sync.Map
 	gBot *discordgo.Session
 	gExit = make(chan struct{})
 	gSelfDestructMessages = make(chan SelfDestructMessage, 10)

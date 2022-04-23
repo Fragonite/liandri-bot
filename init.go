@@ -76,6 +76,29 @@ func initAdminWhitelist() {
 	gLogger.Println("admins.csv:", gAdmins)
 }
 
+func initURLs() {
+	var file, err = os.OpenFile("urls.csv", os.O_RDONLY | os.O_CREATE, 0666)
+	if err != nil {
+		gLogger.Println(err)
+		os.Exit(1)
+		return
+	}
+	defer file.Close()
+	
+	var reader = csv.NewReader(file)
+	reader.FieldsPerRecord = 2
+	records, err := reader.ReadAll()
+	if err != nil {
+		gLogger.Println(err, "(urls.csv requires 1 key-value pair per line)")
+		os.Exit(1)
+		return
+	}
+	
+	for _, v := range records {
+		gURLs.Store(v[0], v[1])
+	}
+}
+
 func initDiscord() {
 	var tokenFound = false
 	var err error
