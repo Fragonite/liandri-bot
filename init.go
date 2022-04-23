@@ -26,6 +26,7 @@ func init() {
 	gLogger.Println("Liandri Bot " + gVersionLong)
 	
 	initAdminWhitelist()
+	initURLs()
 	initDiscord()
 	go selfDestructMessageLoop(gExit, gSelfDestructMessages)
 	go utQueryLoop(gUTAutoQueryLoopUpdates, gUTQueryEvents)
